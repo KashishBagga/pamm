@@ -3,7 +3,7 @@ User management and configuration API endpoints.
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 from typing import Optional
 
 from app.core.database import get_db
@@ -41,8 +41,12 @@ async def list_users(
     - **team**: Filter by team code
     - **search**: Search by name or email
     """
-    # Build query
-    query = select(User)
+    # Build query with eager loading
+    query = select(User).options(
+        selectinload(User.role),
+        selectinload(User.location),
+        selectinload(User.team)
+    )
     
     # Apply filters
     if role:
@@ -73,12 +77,9 @@ async def list_users(
     result = await db.execute(query)
     users = result.scalars().all()
     
-    # Format response
-    user_list = []
-    for user in users:
-        # Fetch relationships if not loaded
-        await db.refresh(user, ["role", "location", "team"])
-        user_list.append(UserListItem(
+    # Format response using pre-loaded relationships
+    user_list = [
+        UserListItem(
             id=user.id,
             email=user.email,
             full_name=user.full_name,
@@ -87,7 +88,9 @@ async def list_users(
             team=user.team.code,
             is_active=user.is_active,
             created_at=user.created_at
-        ))
+        )
+        for user in users
+    ]
     
     return {
         "success": True,

@@ -33,17 +33,14 @@ class PatientService:
             if missing_cols:
                 return 0, [f"Missing required columns: {', '.join(missing_cols)}"]
 
-            processed_count = 0
-            # Process in chunks if needed, but for now simple iteration
+            # Add patient records (O(N) add, but O(1) commit later)
             for _, row in df.iterrows():
                 try:
-                    # Basic presence validation
                     if pd.isna(row["Patient ID"]) or pd.isna(row["First Name"]):
                         continue
                         
                     patient_id = str(row["Patient ID"])
                     
-                    # Create patient object and encrypt fields
                     patient = Patient(
                         patient_id=patient_id,
                         first_name=encryption_manager.encrypt(str(row["First Name"])),
@@ -57,9 +54,7 @@ class PatientService:
                 except Exception as e:
                     errors.append(f"Error processing row with Patient ID {row.get('Patient ID')}: {str(e)}")
 
-            await session.commit()
-            
-            # Log audit
+            # Log audit and commit all changes (patients + audit) in a single transaction
             audit = PatientAuditLog(
                 action="UPLOAD",
                 performed_by_id=manager_id,
@@ -102,12 +97,12 @@ class PatientService:
         result = await session.execute(query)
         patients = result.scalars().all()
         
-        # Log Audit for Access
+        # Log Audit for Access (add to session, will commit with other potential changes or explicitly if standalone)
         audit = PatientAuditLog(
             action="ACCESS",
             performed_by_id=manager_id,
             details=f"Accessed patient list (page={page}, search='{search or ''}')",
-            client_ip="internal" # Ideally passed from request
+            client_ip="internal"
         )
         session.add(audit)
         await session.commit()
@@ -148,10 +143,7 @@ class PatientService:
         if data.gender:
             patient.gender = encryption_manager.encrypt(data.gender)
             
-        await session.commit()
-        await session.refresh(patient)
-        
-        # Audit
+        # Log audit and commit update
         audit = PatientAuditLog(
             action="EDIT",
             performed_by_id=manager_id,
@@ -160,6 +152,7 @@ class PatientService:
         )
         session.add(audit)
         await session.commit()
+        await session.refresh(patient)
         
         # Decrypt for return
         patient.first_name = encryption_manager.decrypt(patient.first_name)

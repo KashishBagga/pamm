@@ -27,6 +27,7 @@ export default function PatientManagement() {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Pagination & Search
     const [page, setPage] = useState(1);
@@ -37,6 +38,9 @@ export default function PatientManagement() {
     // Inline Editing
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Patient>>({});
+
+    // Sorting
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Patient; direction: 'asc' | 'desc' } | null>(null);
 
     const fetchPatients = useCallback(async () => {
         setLoading(true);
@@ -65,7 +69,15 @@ export default function PatientManagement() {
         setSuccess(null);
 
         try {
+            // Simulate progress
+            const interval = setInterval(() => {
+                setUploadProgress(prev => (prev >= 90 ? 90 : prev + 10));
+            }, 200);
+
             const response = await patientService.uploadPatients(acceptedFiles[0]);
+            clearInterval(interval);
+            setUploadProgress(100);
+
             if (response.data.success) {
                 setSuccess(`Successfully processed ${response.data.processed_count} records.`);
                 if (response.data.errors.length > 0) {
@@ -76,7 +88,10 @@ export default function PatientManagement() {
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to upload file');
         } finally {
-            setUploading(false);
+            setTimeout(() => {
+                setUploading(false);
+                setUploadProgress(0);
+            }, 500);
         }
     };
 
@@ -100,15 +115,63 @@ export default function PatientManagement() {
     };
 
     const handleSave = async (id: string) => {
+        const originalPatients = [...patients];
         try {
-            await patientService.updatePatient(id, editForm);
+            // Optimistic update
+            setPatients(prev => prev.map(p =>
+                p.id === id ? { ...p, ...editForm } : p
+            ));
             setEditingId(null);
-            fetchPatients();
+
+            await patientService.updatePatient(id, editForm);
             setSuccess('Patient record updated');
+            fetchPatients(); // Refetch to sync with server-side decryption/timestamps
         } catch (err: any) {
-            setError('Failed to update patient');
+            // Rollback on error
+            setPatients(originalPatients);
+            setError('Failed to update patient. Changes rolled back.');
         }
     };
+
+    const handleSort = (key: keyof Patient) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const filteredAndSortedPatients = React.useMemo(() => {
+        let result = [...patients];
+
+        // Any-field client-side filter (decrypted data)
+        if (search) {
+            const searchLower = search.toLowerCase();
+            result = result.filter(p =>
+                p.patient_id.toLowerCase().includes(searchLower) ||
+                p.first_name.toLowerCase().includes(searchLower) ||
+                p.last_name.toLowerCase().includes(searchLower) ||
+                p.gender.toLowerCase().includes(searchLower)
+            );
+        }
+
+        if (!sortConfig) return result;
+
+        return result.sort((a, b) => {
+            const aValue = a[sortConfig.key];
+            const bValue = b[sortConfig.key];
+
+            if (aValue === undefined || bValue === undefined) return 0;
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }, [patients, sortConfig, search]);
 
     return (
         <div className="space-y-8">
@@ -133,6 +196,14 @@ export default function PatientManagement() {
                         <p className="text-slate-300">
                             {uploading ? 'Processing file...' : isDragActive ? 'Drop the file here' : 'Drag & drop an Excel file, or click to select'}
                         </p>
+                        {uploading && (
+                            <div className="w-full max-w-md bg-slate-800 rounded-full h-2 mt-2">
+                                <div
+                                    className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${uploadProgress}%` }}
+                                ></div>
+                            </div>
+                        )}
                         <p className="text-xs text-slate-500">Supported formats: .xlsx, .xls (Max 10k records)</p>
                     </div>
                 </div>
@@ -175,11 +246,21 @@ export default function PatientManagement() {
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="bg-slate-950/50 text-slate-400 uppercase text-xs font-bold tracking-wider">
-                                <th className="px-6 py-4">Patient ID</th>
-                                <th className="px-6 py-4">First Name</th>
-                                <th className="px-6 py-4">Last Name</th>
-                                <th className="px-6 py-4">DOB</th>
-                                <th className="px-6 py-4">Gender</th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('patient_id')}>
+                                    <div className="flex items-center gap-1">Patient ID <ArrowUpDown className="w-3 h-3" /></div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('first_name')}>
+                                    <div className="flex items-center gap-1">First Name <ArrowUpDown className="w-3 h-3" /></div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('last_name')}>
+                                    <div className="flex items-center gap-1">Last Name <ArrowUpDown className="w-3 h-3" /></div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('date_of_birth')}>
+                                    <div className="flex items-center gap-1">DOB <ArrowUpDown className="w-3 h-3" /></div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('gender')}>
+                                    <div className="flex items-center gap-1">Gender <ArrowUpDown className="w-3 h-3" /></div>
+                                </th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -192,11 +273,11 @@ export default function PatientManagement() {
                                         ))}
                                     </tr>
                                 ))
-                            ) : patients.length === 0 ? (
+                            ) : filteredAndSortedPatients.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-slate-500">No patient records found</td>
                                 </tr>
-                            ) : patients.map((patient) => (
+                            ) : filteredAndSortedPatients.map((patient) => (
                                 <tr key={patient.id} className="hover:bg-slate-800/30 transition-colors">
                                     <td className="px-6 py-4 font-mono text-indigo-400">{patient.patient_id}</td>
                                     <td className="px-6 py-4">

@@ -79,38 +79,8 @@ async def login(
         db, credentials, ip_address, user_agent
     )
     
-    # Build response with user details
-    user_response = UserResponse(
-        id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        role={
-            "id": user.role.id,
-            "name": user.role.name,
-            "display_name": user.role.display_name,
-            "description": user.role.description,
-            "hierarchy_level": user.role.hierarchy_level,
-            "created_at": user.role.created_at
-        },
-        location={
-            "id": user.location.id,
-            "code": user.location.code,
-            "name": user.location.name,
-            "timezone": user.location.timezone,
-            "is_active": user.location.is_active,
-            "created_at": user.location.created_at
-        },
-        team={
-            "id": user.team.id,
-            "code": user.team.code,
-            "name": user.team.name,
-            "description": user.team.description,
-            "is_active": user.team.is_active,
-            "created_at": user.team.created_at
-        },
-        is_active=user.is_active,
-        created_at=user.created_at
-    )
+    # Build response with user details using pre-loaded relationships
+    user_response = UserResponse.model_validate(user)
     
     return LoginResponse(
         access_token=access_token,
@@ -177,37 +147,7 @@ async def get_current_user_info(
     
     Requires valid access token in Authorization header.
     """
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        role={
-            "id": current_user.role.id,
-            "name": current_user.role.name,
-            "display_name": current_user.role.display_name,
-            "description": current_user.role.description,
-            "hierarchy_level": current_user.role.hierarchy_level,
-            "created_at": current_user.role.created_at
-        },
-        location={
-            "id": current_user.location.id,
-            "code": current_user.location.code,
-            "name": current_user.location.name,
-            "timezone": current_user.location.timezone,
-            "is_active": current_user.location.is_active,
-            "created_at": current_user.location.created_at
-        },
-        team={
-            "id": current_user.team.id,
-            "code": current_user.team.code,
-            "name": current_user.team.name,
-            "description": current_user.team.description,
-            "is_active": current_user.team.is_active,
-            "created_at": current_user.team.created_at
-        },
-        is_active=current_user.is_active,
-        created_at=current_user.created_at
-    )
+    return UserResponse.model_validate(current_user)
 
 
 @router.post("/forgot-password", response_model=SuccessResponse)

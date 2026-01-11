@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
+import Link from 'next/link';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -79,6 +80,14 @@ export default function LoginPage() {
                             />
                         </div>
 
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm">
+                                <Link href="/forgot-password" title="title" className="font-medium text-primary-600 hover:text-primary-500">
+                                    Forgot your password?
+                                </Link>
+                            </div>
+                        </div>
+
                         <div>
                             <button
                                 type="submit"
@@ -99,6 +108,15 @@ export default function LoginPage() {
                             </button>
                         </div>
                     </form>
+
+                    <div className="mt-8 text-center text-sm">
+                        <p className="text-gray-600">
+                            Don't have an account?{' '}
+                            <Link href="/register" className="font-medium text-primary-600 hover:text-primary-500">
+                                Create one now
+                            </Link>
+                        </p>
+                    </div>
 
                     <div className="mt-6">
                         <div className="relative">

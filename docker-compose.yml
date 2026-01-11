@@ -30,7 +30,8 @@ services:
       ACCOUNT_LOCKOUT_THRESHOLD: 5
       ACCOUNT_LOCKOUT_DURATION_MINUTES: 15
       FRONTEND_URL: http://localhost:3000
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-9YfU6rU6jPqXyZ8W5V2D4N7H3K1M6P9S0V2X5Z8B1N4=}
     ports:
       - "8000:8000"
     depends_on:
