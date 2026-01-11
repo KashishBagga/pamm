@@ -20,7 +20,7 @@ from app.api.dependencies import get_current_admin_user
 router = APIRouter(tags=["Users & Configuration"])
 
 
-@router.get("/users", response_model=dict)
+@router.get("", response_model=dict)
 async def list_users(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),

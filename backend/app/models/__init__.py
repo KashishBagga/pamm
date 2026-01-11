@@ -6,7 +6,9 @@ from app.models.models import (
     Team,
     UserSession,
     AuthAttempt,
-    PasswordReset
+    PasswordReset,
+    Patient,
+    PatientAuditLog
 )
 
 __all__ = [

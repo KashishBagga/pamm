@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
     
+    # Encryption Key
+    ENCRYPTION_KEY: str = "9YfU6rU6jPqXyZ8W5V2D4N7H3K1M6P9S0V2X5Z8B1N4="
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

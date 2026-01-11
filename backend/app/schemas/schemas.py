@@ -1,12 +1,12 @@
 """
 Pydantic schemas for request/response validation.
 """
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional
-from datetime import datetime
-from uuid import UUID
 import re
+import uuid
+from datetime import datetime
+from typing import List, Optional
 
+from pydantic import BaseModel, EmailStr, Field, validator
 
 # ============================================================================
 # Role Schemas
@@ -22,7 +22,7 @@ class RoleBase(BaseModel):
 
 class RoleResponse(RoleBase):
     """Role response schema."""
-    id: UUID
+    id: uuid.UUID
     created_at: datetime
     
     class Config:
@@ -42,7 +42,7 @@ class LocationBase(BaseModel):
 
 class LocationResponse(LocationBase):
     """Location response schema."""
-    id: UUID
+    id: uuid.UUID
     is_active: bool
     created_at: datetime
     
@@ -63,7 +63,7 @@ class TeamBase(BaseModel):
 
 class TeamResponse(TeamBase):
     """Team response schema."""
-    id: UUID
+    id: uuid.UUID
     is_active: bool
     created_at: datetime
     
@@ -84,9 +84,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """User creation schema."""
     password: str = Field(..., min_length=8)
-    role_id: UUID
-    location_id: UUID
-    team_id: UUID
+    role_id: uuid.UUID
+    location_id: uuid.UUID
+    team_id: uuid.UUID
     
     @validator('password')
     def validate_password(cls, v):
@@ -106,7 +106,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     """User response schema."""
-    id: UUID
+    id: uuid.UUID
     role: RoleResponse
     location: LocationResponse
     team: TeamResponse
@@ -119,7 +119,7 @@ class UserResponse(UserBase):
 
 class UserListItem(BaseModel):
     """User list item schema (simplified for listings)."""
-    id: UUID
+    id: uuid.UUID
     email: str
     full_name: str
     role: str
@@ -188,7 +188,65 @@ class ResetPasswordRequest(BaseModel):
 
 
 # ============================================================================
-# Response Wrappers
+# Patient Schemas
+# ============================================================================
+
+class PatientBase(BaseModel):
+    patient_id: str = Field(..., min_length=1, description="Unique alphanumeric patient ID")
+    first_name: str = Field(..., min_length=1)
+    last_name: str = Field(..., min_length=1)
+    date_of_birth: str = Field(..., description="Date of birth (encrypted/decrypted)")
+    gender: str = Field(..., min_length=1)
+
+
+class PatientCreate(PatientBase):
+    pass
+
+
+class PatientUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+
+
+class PatientResponse(PatientBase):
+    id: uuid.UUID
+    manager_id: uuid.UUID
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class PatientListResponse(BaseModel):
+    success: bool
+    data: List[PatientResponse]
+    total: int
+    page: int
+    limit: int
+
+
+# ============================================================================
+# Audit Log Schemas
+# ============================================================================
+
+class AuditLogResponse(BaseModel):
+    id: uuid.UUID
+    action: str
+    performed_by_id: uuid.UUID
+    patient_record_id: Optional[uuid.UUID]
+    details: Optional[str]
+    client_ip: Optional[str]
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# Response Wrappers & Pagination
 # ============================================================================
 
 class SuccessResponse(BaseModel):
@@ -204,10 +262,6 @@ class ErrorResponse(BaseModel):
     error: dict
 
 
-# ============================================================================
-# Pagination
-# ============================================================================
-
 class PaginationParams(BaseModel):
     """Pagination parameters."""
     page: int = Field(default=1, ge=1)
@@ -215,6 +269,6 @@ class PaginationParams(BaseModel):
 
 
 class PaginatedResponse(BaseModel):
-    """Paginated response schema."""
-    users: list[UserListItem]
+    """Paginated user list response."""
+    users: List[UserListItem]
     pagination: dict

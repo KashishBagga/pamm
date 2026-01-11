@@ -93,3 +93,34 @@ export interface PaginatedUsers {
         pages: number;
     };
 }
+
+// Patient Management Types (Assignment 2)
+export interface Patient {
+    id: string;
+    patient_id: string;
+    first_name: string;
+    last_name: string;
+    date_of_birth: string;
+    gender: string;
+    manager_id: string;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface PatientListResponse {
+    success: boolean;
+    data: Patient[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+export interface AuditLog {
+    id: string;
+    action: string;
+    performed_by_id: string;
+    patient_record_id?: string;
+    details?: string;
+    client_ip?: string;
+    timestamp: string;
+}

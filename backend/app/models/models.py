@@ -82,8 +82,44 @@ class User(Base):
     location = relationship("Location", back_populates="users")
     team = relationship("Team", back_populates="users")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    patients = relationship("Patient", back_populates="manager")
     auth_attempts = relationship("AuthAttempt", back_populates="user", cascade="all, delete-orphan")
     password_resets = relationship("PasswordReset", back_populates="user", cascade="all, delete-orphan")
+
+
+class Patient(Base):
+    """
+    Patient model with application-level encryption for PII.
+    """
+    __tablename__ = "patients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(String, unique=True, index=True, nullable=False)  # Unencrypted for indexing
+    first_name = Column(String, nullable=False)  # Encrypted
+    last_name = Column(String, nullable=False)   # Encrypted
+    date_of_birth = Column(String, nullable=False) # Encrypted
+    gender = Column(String, nullable=False)        # Encrypted
+    manager_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    manager = relationship("User", back_populates="patients")
+
+
+class PatientAuditLog(Base):
+    """
+    Audit log for patient data access and modifications (HIPAA compliance).
+    """
+    __tablename__ = "phi_audit_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    action = Column(String, nullable=False)  # UPLOAD, VIEW, EDIT, DELETE
+    performed_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    patient_record_id = Column(UUID(as_uuid=True), nullable=True)
+    details = Column(String, nullable=True)
+    client_ip = Column(String, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class UserSession(Base):

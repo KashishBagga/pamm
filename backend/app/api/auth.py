@@ -21,7 +21,7 @@ from app.services import AuthService
 from app.api.dependencies import get_current_user
 from app.models import User
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(tags=["Authentication"])
 
 
 def get_client_info(request: Request) -> tuple[Optional[str], Optional[str]]:
