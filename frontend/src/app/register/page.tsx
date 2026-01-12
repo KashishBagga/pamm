@@ -33,9 +33,9 @@ export default function RegisterPage() {
         const fetchConfig = async () => {
             try {
                 const [roles, locations, teams] = await Promise.all([
-                    apiClient.get('/users/roles'),
-                    apiClient.get('/users/locations'),
-                    apiClient.get('/users/teams'),
+                    apiClient.get('/users/config/roles'),
+                    apiClient.get('/users/config/locations'),
+                    apiClient.get('/users/config/teams'),
                 ]);
                 setConfig({
                     roles: roles.data.data,

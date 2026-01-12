@@ -3,6 +3,7 @@ Seed database with initial data.
 """
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.core.database import async_session_maker
 from app.models import Role, Location, Team, User
 from app.core.security import hash_password
@@ -38,9 +39,19 @@ async def seed_database():
         
         roles = {}
         for role_data in roles_data:
-            role = Role(**role_data)
-            session.add(role)
-            roles[role_data["name"]] = role
+            # Check if role already exists
+            result = await session.execute(
+                select(Role).where(Role.name == role_data["name"])
+            )
+            existing_role = result.scalar_one_or_none()
+            
+            if existing_role:
+                print(f"  Role '{role_data['name']}' already exists, skipping...")
+                roles[role_data["name"]] = existing_role
+            else:
+                role = Role(**role_data)
+                session.add(role)
+                roles[role_data["name"]] = role
         
         await session.commit()
         for role in roles.values():
@@ -57,9 +68,19 @@ async def seed_database():
         
         locations = {}
         for location_data in locations_data:
-            location = Location(**location_data)
-            session.add(location)
-            locations[location_data["code"]] = location
+            # Check if location already exists
+            result = await session.execute(
+                select(Location).where(Location.code == location_data["code"])
+            )
+            existing_location = result.scalar_one_or_none()
+            
+            if existing_location:
+                print(f"  Location '{location_data['code']}' already exists, skipping...")
+                locations[location_data["code"]] = existing_location
+            else:
+                location = Location(**location_data)
+                session.add(location)
+                locations[location_data["code"]] = location
         
         await session.commit()
         for location in locations.values():
@@ -87,9 +108,19 @@ async def seed_database():
         
         teams = {}
         for team_data in teams_data:
-            team = Team(**team_data)
-            session.add(team)
-            teams[team_data["code"]] = team
+            # Check if team already exists
+            result = await session.execute(
+                select(Team).where(Team.code == team_data["code"])
+            )
+            existing_team = result.scalar_one_or_none()
+            
+            if existing_team:
+                print(f"  Team '{team_data['code']}' already exists, skipping...")
+                teams[team_data["code"]] = existing_team
+            else:
+                team = Team(**team_data)
+                session.add(team)
+                teams[team_data["code"]] = team
         
         await session.commit()
         for team in teams.values():
@@ -157,15 +188,24 @@ async def seed_database():
         ]
         
         for user_data in users_data:
-            user = User(
-                email=user_data["email"],
-                password_hash=hash_password(user_data["password"]),
-                full_name=user_data["full_name"],
-                role_id=roles[user_data["role"]].id,
-                location_id=locations[user_data["location"]].id,
-                team_id=teams[user_data["team"]].id
+            # Check if user already exists
+            result = await session.execute(
+                select(User).where(User.email == user_data["email"])
             )
-            session.add(user)
+            existing_user = result.scalar_one_or_none()
+            
+            if existing_user:
+                print(f"  User '{user_data['email']}' already exists, skipping...")
+            else:
+                user = User(
+                    email=user_data["email"],
+                    password_hash=hash_password(user_data["password"]),
+                    full_name=user_data["full_name"],
+                    role_id=roles[user_data["role"]].id,
+                    location_id=locations[user_data["location"]].id,
+                    team_id=teams[user_data["team"]].id
+                )
+                session.add(user)
         
         await session.commit()
         

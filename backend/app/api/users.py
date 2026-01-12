@@ -4,6 +4,7 @@ User management and configuration API endpoints.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func, or_
 from typing import Optional
 
 from app.core.database import get_db
